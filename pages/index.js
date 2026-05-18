@@ -26,7 +26,7 @@ function StarRating({ value, onChange }) {
     if (!onChange) return
     const rect = e.currentTarget.getBoundingClientRect()
     const x = e.clientX - rect.left
-    const isHalf = x < rect.width / 2
+    const isHalf = x < rect.width * 0.4
     onChange(isHalf ? star - 0.5 : star)
   }
 
@@ -34,7 +34,7 @@ function StarRating({ value, onChange }) {
     if (!onChange) return
     const rect = e.currentTarget.getBoundingClientRect()
     const x = e.clientX - rect.left
-    const isHalf = x < rect.width / 2
+    const isHalf = x < rect.width * 0.4
     setHover(isHalf ? star - 0.5 : star)
   }
 
