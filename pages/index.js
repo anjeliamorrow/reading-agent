@@ -3,6 +3,8 @@ import Head from 'next/head'
 
 const TABS = ['Recommendations', 'Reading', 'Library']
 
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
+
 function StarRating({ value, onChange }) {
   return (
     <div style={{ display: 'flex', gap: 4 }}>
@@ -17,10 +19,41 @@ function StarRating({ value, onChange }) {
   )
 }
 
+function MonthYearPicker({ month, year, onMonthChange, onYearChange }) {
+  const currentYear = new Date().getFullYear()
+  const years = Array.from({ length: 20 }, (_, i) => currentYear - i)
+  return (
+    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+      <select value={month} onChange={e => onMonthChange(e.target.value)} style={{
+        flex: 1, background: 'var(--bg-3)', border: '0.5px solid var(--border)',
+        borderRadius: 6, padding: '8px 10px', fontSize: 13, color: 'var(--text)',
+        outline: 'none', cursor: 'pointer',
+      }}>
+        {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
+      </select>
+      <select value={year} onChange={e => onYearChange(e.target.value)} style={{
+        width: 100, background: 'var(--bg-3)', border: '0.5px solid var(--border)',
+        borderRadius: 6, padding: '8px 10px', fontSize: 13, color: 'var(--text)',
+        outline: 'none', cursor: 'pointer',
+      }}>
+        {years.map(y => <option key={y} value={y}>{y}</option>)}
+      </select>
+    </div>
+  )
+}
+
 function BookCard({ book, onStartReading, onFinish, onDelete, isAdmin }) {
   const [finishing, setFinishing] = useState(false)
   const [rating, setRating] = useState(5)
   const [notes, setNotes] = useState('')
+  const [month, setMonth] = useState(MONTHS[new Date().getMonth()])
+  const [year, setYear] = useState(new Date().getFullYear().toString())
+
+  function formatFinished(book) {
+    if (book.finishedMonth && book.finishedYear) return `${book.finishedMonth} ${book.finishedYear}`
+    if (book.finishedAt) return new Date(book.finishedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    return null
+  }
 
   return (
     <div style={{
@@ -41,9 +74,9 @@ function BookCard({ book, onStartReading, onFinish, onDelete, isAdmin }) {
           {book.summary && <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 8 }}>{book.summary}</p>}
           {book.notes && <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 8, fontStyle: 'italic' }}>"{book.notes}"</p>}
           {book.rating && <StarRating value={book.rating} />}
-          {book.finishedAt && (
+          {formatFinished(book) && (
             <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 8 }}>
-              Finished {new Date(book.finishedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              Finished {formatFinished(book)}
             </p>
           )}
         </div>
@@ -78,20 +111,17 @@ function BookCard({ book, onStartReading, onFinish, onDelete, isAdmin }) {
         <div style={{ marginTop: 16, borderTop: '0.5px solid var(--border)', paddingTop: 16 }}>
           <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>Rate this book:</p>
           <StarRating value={rating} onChange={setRating} />
-          <textarea
-            value={notes}
-            onChange={e => setNotes(e.target.value)}
-            placeholder="What did you like about it? (optional)"
-            rows={3}
-            style={{
+          <textarea value={notes} onChange={e => setNotes(e.target.value)}
+            placeholder="What did you like about it? (optional)" rows={3} style={{
               width: '100%', marginTop: 12, background: 'var(--bg-3)',
               border: '0.5px solid var(--border)', borderRadius: 6,
               padding: '10px 12px', fontSize: 13, color: 'var(--text)',
               resize: 'vertical', outline: 'none',
-            }}
-          />
-          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-            <button onClick={() => onFinish(book, rating, notes)} style={{
+            }} />
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 12, marginBottom: 4 }}>When did you finish it?</p>
+          <MonthYearPicker month={month} year={year} onMonthChange={setMonth} onYearChange={setYear} />
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            <button onClick={() => onFinish(book, rating, notes, month, year)} style={{
               background: 'var(--accent)', border: 'none', borderRadius: 6,
               padding: '8px 16px', fontSize: 13, fontWeight: 500, color: '#0a0a0a',
               cursor: 'pointer',
@@ -114,10 +144,16 @@ function AddBookModal({ onAdd, onClose, password }) {
   const [rating, setRating] = useState(5)
   const [notes, setNotes] = useState('')
   const [mode, setMode] = useState('read')
+  const [month, setMonth] = useState(MONTHS[new Date().getMonth()])
+  const [year, setYear] = useState(new Date().getFullYear().toString())
 
   async function handleSubmit() {
     if (!title || !author) return
-    const book = { id: Date.now().toString(), title, author, rating, notes }
+    const book = {
+      id: Date.now().toString(), title, author, rating, notes,
+      finishedMonth: mode === 'read' ? month : undefined,
+      finishedYear: mode === 'read' ? year : undefined,
+    }
     await onAdd(book, mode)
     onClose()
   }
@@ -131,6 +167,7 @@ function AddBookModal({ onAdd, onClose, password }) {
       <div style={{
         background: 'var(--bg-2)', border: '0.5px solid var(--border)',
         borderRadius: 'var(--radius)', padding: '2rem', width: '100%', maxWidth: 480,
+        maxHeight: '90vh', overflowY: 'auto',
       }}>
         <h2 style={{ fontFamily: 'var(--serif)', fontSize: 22, fontWeight: 400, color: 'var(--text)', marginBottom: '1.5rem' }}>
           Add a book
@@ -170,10 +207,12 @@ function AddBookModal({ onAdd, onClose, password }) {
                 padding: '10px 12px', fontSize: 13, color: 'var(--text)',
                 resize: 'vertical', outline: 'none',
               }} />
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 12, marginBottom: 4 }}>When did you finish it?</p>
+            <MonthYearPicker month={month} year={year} onMonthChange={setMonth} onYearChange={setYear} />
           </>
         )}
 
-        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+        <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
           <button onClick={handleSubmit} style={{
             background: 'var(--accent)', border: 'none', borderRadius: 6,
             padding: '10px 20px', fontSize: 14, fontWeight: 500, color: '#0a0a0a',
@@ -234,8 +273,8 @@ export default function Home() {
     await apiPost('add_reading', book)
   }
 
-  async function handleFinish(book, rating, notes) {
-    await apiPost('finish', { ...book, rating, notes })
+  async function handleFinish(book, rating, notes, month, year) {
+    await apiPost('finish', { ...book, rating, notes, finishedMonth: month, finishedYear: year })
     setRecs(null)
     fetch('/api/recommendations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) })
   }
@@ -262,8 +301,16 @@ export default function Home() {
   }
 
   const sortedRead = [...books.read].sort((a, b) => {
-    if (sortBy === 'newest') return new Date(b.finishedAt) - new Date(a.finishedAt)
-    if (sortBy === 'oldest') return new Date(a.finishedAt) - new Date(b.finishedAt)
+    if (sortBy === 'newest') {
+      const aDate = a.finishedAt ? new Date(a.finishedAt) : new Date(`${a.finishedMonth} 1, ${a.finishedYear}`)
+      const bDate = b.finishedAt ? new Date(b.finishedAt) : new Date(`${b.finishedMonth} 1, ${b.finishedYear}`)
+      return bDate - aDate
+    }
+    if (sortBy === 'oldest') {
+      const aDate = a.finishedAt ? new Date(a.finishedAt) : new Date(`${a.finishedMonth} 1, ${a.finishedYear}`)
+      const bDate = b.finishedAt ? new Date(b.finishedAt) : new Date(`${b.finishedMonth} 1, ${b.finishedYear}`)
+      return aDate - bDate
+    }
     if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0)
     return 0
   })
@@ -281,7 +328,6 @@ export default function Home() {
 
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '3rem 1.5rem 6rem' }}>
 
-        {/* Header */}
         <div style={{ marginBottom: '2.5rem', animation: 'fadeUp 0.5s ease forwards' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
             <p style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-dim)' }}>
@@ -295,14 +341,13 @@ export default function Home() {
                   cursor: 'pointer',
                 }}>+ Add book</button>
               )}
-              {!isAdmin && (
+              {!isAdmin ? (
                 <button onClick={() => setShowLogin(true)} style={{
                   background: 'none', border: 'none', fontSize: 11,
                   letterSpacing: '0.08em', textTransform: 'uppercase',
                   color: 'var(--text-dim)', cursor: 'pointer',
                 }}>Admin</button>
-              )}
-              {isAdmin && (
+              ) : (
                 <button onClick={() => setIsAdmin(false)} style={{
                   background: 'none', border: 'none', fontSize: 11,
                   color: 'var(--text-dim)', cursor: 'pointer',
@@ -316,7 +361,6 @@ export default function Home() {
           <div style={{ height: '0.5px', background: 'var(--border)' }} />
         </div>
 
-        {/* Login modal */}
         {showLogin && (
           <div style={{
             position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
@@ -340,16 +384,15 @@ export default function Home() {
           </div>
         )}
 
-        {/* Add book modal */}
         {showAddBook && (
           <AddBookModal password={password} onAdd={handleAddBook} onClose={() => setShowAddBook(false)} />
         )}
 
-        {/* Tabs */}
         <div style={{ display: 'flex', gap: 0, marginBottom: '2rem', borderBottom: '0.5px solid var(--border)' }}>
           {TABS.map((t, i) => (
             <button key={t} onClick={() => setTab(i)} style={{
-              background: 'none', border: 'none', borderBottom: tab === i ? '1.5px solid var(--accent)' : '1.5px solid transparent',
+              background: 'none', border: 'none',
+              borderBottom: tab === i ? '1.5px solid var(--accent)' : '1.5px solid transparent',
               padding: '10px 20px', fontSize: 13, fontWeight: tab === i ? 500 : 400,
               color: tab === i ? 'var(--text)' : 'var(--text-dim)',
               cursor: 'pointer', marginBottom: '-1px', transition: 'all 0.15s',
@@ -364,7 +407,6 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Recommendations tab */}
         {tab === 0 && (
           <div>
             {recsLoading && (
@@ -378,7 +420,12 @@ export default function Home() {
                 onStartReading={isAdmin ? handleStartReading : null} />
             ))}
             {isAdmin && recs && (
-              <button onClick={() => { setRecs(null); setRecsLoading(true); fetch('/api/recommendations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) }).then(() => fetch('/api/recommendations').then(r => r.json()).then(d => { setRecs(d); setRecsLoading(false) })) }} style={{
+              <button onClick={() => {
+                setRecs(null)
+                setRecsLoading(true)
+                fetch('/api/recommendations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) })
+                  .then(() => fetch('/api/recommendations').then(r => r.json()).then(d => { setRecs(d); setRecsLoading(false) }))
+              }} style={{
                 background: 'none', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)',
                 padding: '10px 20px', fontSize: 13, color: 'var(--text-muted)',
                 cursor: 'pointer', width: '100%', marginTop: 8,
@@ -387,7 +434,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* Currently reading tab */}
         {tab === 1 && (
           <div>
             {books.reading.length === 0 && (
@@ -404,7 +450,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* Library tab */}
         {tab === 2 && (
           <div>
             <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
