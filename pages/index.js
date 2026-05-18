@@ -127,8 +127,8 @@ function BookCard({ book, onStartReading, onFinish, onDelete, isAdmin }) {
           <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: book.why || book.summary || book.notes ? 10 : 0 }}>{book.author}</p>
           {book.why && <p style={{ fontSize: 13, color: 'var(--accent)', lineHeight: 1.6, marginBottom: 8 }}>{book.why}</p>}
           {book.summary && <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 8 }}>{book.summary}</p>}
-          {book.notes && <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 8, fontStyle: 'italic' }}>"{book.notes}"</p>}
-          {book.rating > 0 && <StarRating value={book.rating} />}
+          {!book.startedAt && book.notes && <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 8, fontStyle: 'italic' }}>"{book.notes}"</p>}
+          {!book.startedAt && book.rating > 0 && <StarRating value={book.rating} />}
           {formatFinished(book) && (
             <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 8 }}>Finished {formatFinished(book)}</p>
           )}
